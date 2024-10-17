@@ -115,7 +115,11 @@ class _ScrollbarWithOverlayMenuState extends State<ScrollbarWithOverlayMenu> {
                     itemCount: widget.categories.length,
                     itemBuilder: (context, index) {
                       return ListTile(
-                        title: Text(widget.categories[index], style: const TextStyle(color: Colors.white)),
+                        title: Text(
+                          widget.categories[index],
+                          style: const TextStyle(color: Colors.white),
+                          textAlign: TextAlign.end,
+                        ),
                         onTap: () => _scrollToCategory(index),
                       );
                     },

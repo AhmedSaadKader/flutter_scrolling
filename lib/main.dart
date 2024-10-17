@@ -1,241 +1,77 @@
-import 'package:draggable_scrollbar/draggable_scrollbar.dart';
 import 'package:flutter/material.dart';
+import 'package:custom_scrollbar/customrawscrollbar.dart';
 
 void main() {
-  runApp(const DraggableScrollBarDemo(
-    title: 'Draggable Scroll Bar Demo',
-  ));
+  runApp(const MyApp());
 }
 
-class DraggableScrollBarDemo extends StatelessWidget {
-  final String title;
-
-  const DraggableScrollBarDemo({
-    super.key,
-    required this.title,
-  });
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: title,
-      home: MyHomePage(title: title),
+      home: Scaffold(
+        appBar: AppBar(title: const Text('Custom Scrollbar Example')),
+        body: const ScrollbarDemo(),
+      ),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({
-    super.key,
-    required this.title,
-  });
-
-  final String title;
+class ScrollbarDemo extends StatefulWidget {
+  const ScrollbarDemo({super.key});
 
   @override
-  MyHomePageState createState() => MyHomePageState();
+  State<ScrollbarDemo> createState() => _ScrollbarDemoState();
 }
 
-class MyHomePageState extends State<MyHomePage> {
-  final ScrollController _semicircleController = ScrollController();
-  final ScrollController _arrowsController = ScrollController();
-  final ScrollController _rrectController = ScrollController();
-  final ScrollController _customController = ScrollController();
+class _ScrollbarDemoState extends State<ScrollbarDemo> {
+  final ScrollController _controller = ScrollController();
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(widget.title),
-          bottom: const TabBar(tabs: [
-            Tab(text: 'Semicircle'),
-            Tab(text: 'Arrows'),
-            Tab(text: 'RRect'),
-            Tab(text: 'Custom'),
-          ]),
+    return Stack(
+      children: [
+        // Native RawScrollbar or CustomScrollbar
+        CustomThumbScrollbar(
+          controller: _controller,
+          thumbColor: Colors.blueAccent,
+          radius: const Radius.circular(10),
+          thickness: 8.0,
+          child: _buildGridView(),
+          labelTextBuilder: (offset) {
+            final int currentItem = _getCurrentItem(offset);
+            return '$currentItem'; // Must return a string for labelTextBuilder
+          },
         ),
-        body: TabBarView(children: [
-          SemicircleDemo(controller: _semicircleController),
-          ArrowsDemo(controller: _arrowsController),
-          RRectDemo(controller: _rrectController),
-          CustomDemo(controller: _customController),
-        ]),
-      ),
+      ],
     );
   }
-}
 
-class SemicircleDemo extends StatelessWidget {
-  static int numItems = 1000;
-
-  final ScrollController controller;
-
-  const SemicircleDemo({
-    super.key,
-    required this.controller,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollbar.semicircle(
-      alwaysVisibleScrollThumb: true,
-      labelTextBuilder: (offset) {
-        final int currentItem =
-            controller.hasClients ? (controller.offset / controller.position.maxScrollExtent * numItems).floor() : 0;
-
-        return Text("$currentItem");
-      },
-      labelConstraints: const BoxConstraints.tightFor(width: 80.0, height: 30.0),
-      controller: controller,
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 5,
-        ),
-        controller: controller,
-        padding: EdgeInsets.zero,
-        itemCount: numItems,
-        itemBuilder: (context, index) {
-          return Container(
-            alignment: Alignment.center,
-            margin: const EdgeInsets.all(2.0),
-            color: Colors.grey[300],
-          );
-        },
+  // Build the grid view
+  GridView _buildGridView() {
+    return GridView.builder(
+      controller: _controller,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
       ),
-    );
-  }
-}
-
-class ArrowsDemo extends StatelessWidget {
-  final ScrollController controller;
-
-  const ArrowsDemo({
-    super.key,
-    required this.controller,
-  });
-
-  final _itemExtent = 100.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollbar.arrows(
-      alwaysVisibleScrollThumb: true,
-      backgroundColor: Colors.grey.shade800,
-      padding: const EdgeInsets.only(right: 4.0),
-      labelTextBuilder: (double offset) =>
-          Text("${offset ~/ _itemExtent}", style: const TextStyle(color: Colors.white)),
-      controller: controller,
-      child: ListView.builder(
-        controller: controller,
-        itemCount: 1000,
-        itemExtent: _itemExtent,
-        itemBuilder: (context, index) {
-          return Container(
-            padding: const EdgeInsets.all(8.0),
-            child: Material(
-              elevation: 4.0,
-              borderRadius: BorderRadius.circular(4.0),
-              color: Colors.purple[index % 9 * 100],
-              child: Center(
-                child: Text(
-                  index.toString(),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class RRectDemo extends StatelessWidget {
-  final ScrollController controller;
-
-  const RRectDemo({
-    super.key,
-    required this.controller,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollbar.rrect(
-      controller: controller,
-      labelTextBuilder: (offset) => Text("${offset.floor()}"),
-      child: ListView.builder(
-        controller: controller,
-        itemCount: 1000,
-        itemExtent: 100.0,
-        itemBuilder: (context, index) {
-          return Container(
-            padding: const EdgeInsets.all(8.0),
-            child: Material(
-              elevation: 4.0,
-              borderRadius: BorderRadius.circular(4.0),
-              color: Colors.green[index % 9 * 100],
-              child: Center(
-                child: Text(index.toString()),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class CustomDemo extends StatelessWidget {
-  final ScrollController controller;
-
-  const CustomDemo({
-    super.key,
-    required this.controller,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollbar(
-      alwaysVisibleScrollThumb: true,
-      controller: controller,
-      heightScrollThumb: 48.0,
-      backgroundColor: Colors.blue,
-      scrollThumbBuilder: (
-        Color backgroundColor,
-        Animation<double> thumbAnimation,
-        Animation<double> labelAnimation,
-        double height, {
-        Text? labelText,
-        BoxConstraints? labelConstraints,
-      }) {
-        return FadeTransition(
-          opacity: thumbAnimation,
-          child: Container(
-            height: height,
-            width: 20.0,
-            color: backgroundColor,
-          ),
+      itemCount: 1000,
+      itemBuilder: (context, index) {
+        return Container(
+          alignment: Alignment.center,
+          margin: const EdgeInsets.all(2.0),
+          color: Colors.grey[300],
         );
       },
-      child: ListView.builder(
-        controller: controller,
-        itemCount: 1000,
-        itemExtent: 100.0,
-        itemBuilder: (context, index) {
-          return Container(
-            padding: const EdgeInsets.all(8.0),
-            child: Material(
-              elevation: 4.0,
-              borderRadius: BorderRadius.circular(4.0),
-              color: Colors.cyan[index % 9 * 100],
-              child: Center(
-                child: Text(index.toString()),
-              ),
-            ),
-          );
-        },
-      ),
     );
+  }
+
+  // Calculate the current item based on offset
+  int _getCurrentItem(double offset) {
+    if (!_controller.hasClients) return 0;
+    final double maxScrollExtent = _controller.position.maxScrollExtent;
+    final int totalItems = 1000; // Total item count
+    return (offset / maxScrollExtent * totalItems).floor();
   }
 }
