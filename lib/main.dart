@@ -1,9 +1,8 @@
 import 'package:draggable_scrollbar/draggable_scrollbar.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(DraggableScrollBarDemo(
+  runApp(const DraggableScrollBarDemo(
     title: 'Draggable Scroll Bar Demo',
   ));
 }
@@ -12,9 +11,9 @@ class DraggableScrollBarDemo extends StatelessWidget {
   final String title;
 
   const DraggableScrollBarDemo({
-    Key? key,
+    super.key,
     required this.title,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -26,22 +25,22 @@ class DraggableScrollBarDemo extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({
-    Key? key,
+  const MyHomePage({
+    super.key,
     required this.title,
-  }) : super(key: key);
+  });
 
   final String title;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  MyHomePageState createState() => MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  ScrollController _semicircleController = ScrollController();
-  ScrollController _arrowsController = ScrollController();
-  ScrollController _rrectController = ScrollController();
-  ScrollController _customController = ScrollController();
+class MyHomePageState extends State<MyHomePage> {
+  final ScrollController _semicircleController = ScrollController();
+  final ScrollController _arrowsController = ScrollController();
+  final ScrollController _rrectController = ScrollController();
+  final ScrollController _customController = ScrollController();
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +49,7 @@ class _MyHomePageState extends State<MyHomePage> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.title),
-          bottom: TabBar(tabs: [
+          bottom: const TabBar(tabs: [
             Tab(text: 'Semicircle'),
             Tab(text: 'Arrows'),
             Tab(text: 'RRect'),
@@ -74,23 +73,24 @@ class SemicircleDemo extends StatelessWidget {
   final ScrollController controller;
 
   const SemicircleDemo({
-    Key? key,
+    super.key,
     required this.controller,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return DraggableScrollbar.semicircle(
+      alwaysVisibleScrollThumb: true,
       labelTextBuilder: (offset) {
         final int currentItem =
             controller.hasClients ? (controller.offset / controller.position.maxScrollExtent * numItems).floor() : 0;
 
         return Text("$currentItem");
       },
-      labelConstraints: BoxConstraints.tightFor(width: 80.0, height: 30.0),
+      labelConstraints: const BoxConstraints.tightFor(width: 80.0, height: 30.0),
       controller: controller,
       child: GridView.builder(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 5,
         ),
         controller: controller,
@@ -99,7 +99,7 @@ class SemicircleDemo extends StatelessWidget {
         itemBuilder: (context, index) {
           return Container(
             alignment: Alignment.center,
-            margin: EdgeInsets.all(2.0),
+            margin: const EdgeInsets.all(2.0),
             color: Colors.grey[300],
           );
         },
@@ -112,9 +112,9 @@ class ArrowsDemo extends StatelessWidget {
   final ScrollController controller;
 
   const ArrowsDemo({
-    Key? key,
+    super.key,
     required this.controller,
-  }) : super(key: key);
+  });
 
   final _itemExtent = 100.0;
 
@@ -123,8 +123,9 @@ class ArrowsDemo extends StatelessWidget {
     return DraggableScrollbar.arrows(
       alwaysVisibleScrollThumb: true,
       backgroundColor: Colors.grey.shade800,
-      padding: EdgeInsets.only(right: 4.0),
-      labelTextBuilder: (double offset) => Text("${offset ~/ _itemExtent}", style: TextStyle(color: Colors.white)),
+      padding: const EdgeInsets.only(right: 4.0),
+      labelTextBuilder: (double offset) =>
+          Text("${offset ~/ _itemExtent}", style: const TextStyle(color: Colors.white)),
       controller: controller,
       child: ListView.builder(
         controller: controller,
@@ -132,7 +133,7 @@ class ArrowsDemo extends StatelessWidget {
         itemExtent: _itemExtent,
         itemBuilder: (context, index) {
           return Container(
-            padding: EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(8.0),
             child: Material(
               elevation: 4.0,
               borderRadius: BorderRadius.circular(4.0),
@@ -154,9 +155,9 @@ class RRectDemo extends StatelessWidget {
   final ScrollController controller;
 
   const RRectDemo({
-    Key? key,
+    super.key,
     required this.controller,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +170,7 @@ class RRectDemo extends StatelessWidget {
         itemExtent: 100.0,
         itemBuilder: (context, index) {
           return Container(
-            padding: EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(8.0),
             child: Material(
               elevation: 4.0,
               borderRadius: BorderRadius.circular(4.0),
@@ -189,32 +190,15 @@ class CustomDemo extends StatelessWidget {
   final ScrollController controller;
 
   const CustomDemo({
-    Key? key,
+    super.key,
     required this.controller,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return DraggableScrollbar(
+      alwaysVisibleScrollThumb: true,
       controller: controller,
-      child: ListView.builder(
-        controller: controller,
-        itemCount: 1000,
-        itemExtent: 100.0,
-        itemBuilder: (context, index) {
-          return Container(
-            padding: EdgeInsets.all(8.0),
-            child: Material(
-              elevation: 4.0,
-              borderRadius: BorderRadius.circular(4.0),
-              color: Colors.cyan[index % 9 * 100],
-              child: Center(
-                child: Text(index.toString()),
-              ),
-            ),
-          );
-        },
-      ),
       heightScrollThumb: 48.0,
       backgroundColor: Colors.blue,
       scrollThumbBuilder: (
@@ -234,6 +218,24 @@ class CustomDemo extends StatelessWidget {
           ),
         );
       },
+      child: ListView.builder(
+        controller: controller,
+        itemCount: 1000,
+        itemExtent: 100.0,
+        itemBuilder: (context, index) {
+          return Container(
+            padding: const EdgeInsets.all(8.0),
+            child: Material(
+              elevation: 4.0,
+              borderRadius: BorderRadius.circular(4.0),
+              color: Colors.cyan[index % 9 * 100],
+              child: Center(
+                child: Text(index.toString()),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
