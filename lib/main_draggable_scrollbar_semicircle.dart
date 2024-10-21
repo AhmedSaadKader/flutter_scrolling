@@ -1,4 +1,5 @@
-import 'package:draggable_scrollbar/draggable_scrollbar.dart';
+import 'package:custom_scrollbar/extended_draggable_scrollbar_semicircle.dart';
+// import 'package:draggable_scrollbar/draggable_scrollbar.dart';
 import 'package:flutter/material.dart';
 
 void main() {

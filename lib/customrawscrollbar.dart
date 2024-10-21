@@ -29,7 +29,7 @@ class _CustomThumbScrollbarState extends RawScrollbarState<CustomThumbScrollbar>
   @override
   Widget build(BuildContext context) {
     // Ensure the scroll controller is available
-    final ScrollController scrollController = widget.controller ?? PrimaryScrollController.of(context)!;
+    final ScrollController scrollController = widget.controller ?? PrimaryScrollController.of(context);
 
     // Compute the current scroll offset to generate a label
     final double thumbOffset = scrollController.hasClients ? scrollController.offset : 0.0;

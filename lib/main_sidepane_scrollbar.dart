@@ -1,6 +1,5 @@
 import 'package:custom_scrollbar/sidepane_scrollbar.dart';
 import 'package:flutter/material.dart';
-import 'scrollbar_with_category_menu.dart';
 
 void main() {
   runApp(MyApp());
@@ -21,7 +20,7 @@ class MyApp extends StatelessWidget {
 }
 
 class CategoryScrollPage extends StatelessWidget {
-  final ScrollController _scrollController = ScrollController();
+  // final ScrollController _scrollController = ScrollController();
   final List<String> _categories = List.generate(20, (index) => 'Category $index');
 
   @override
