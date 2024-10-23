@@ -24,9 +24,6 @@ class DraggableScrollbar extends StatefulWidget {
 
   final ItemPositionsListener itemPositionsListener;
 
-  /// A function that builds a thumb using the current configuration
-  final ScrollThumbBuilder scrollThumbBuilder;
-
   /// The height of the scroll thumb
   final double heightScrollThumb;
 
@@ -59,7 +56,7 @@ class DraggableScrollbar extends StatefulWidget {
 
   final Function(bool scrolling) scrollStateListener;
 
-  DraggableScrollbar.semicircle({
+  const DraggableScrollbar.semicircle({
     super.key,
     Key? scrollThumbKey,
     this.alwaysVisibleScrollThumb = false,
@@ -75,92 +72,10 @@ class DraggableScrollbar extends StatefulWidget {
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
     this.labelTextBuilder,
     this.labelConstraints,
-  })  : assert(child.scrollDirection == Axis.vertical),
-        scrollThumbBuilder = _thumbSemicircleBuilder(
-          heightScrollThumb * 0.6,
-          scrollThumbKey,
-          alwaysVisibleScrollThumb,
-        );
+  });
 
   @override
   DraggableScrollbarState createState() => DraggableScrollbarState();
-
-  static buildScrollThumbAndLabel({
-    required Widget scrollThumb,
-    required Color backgroundColor,
-    required Animation<double>? thumbAnimation,
-    required Animation<double>? labelAnimation,
-    required Text? labelText,
-    required BoxConstraints? labelConstraints,
-    required bool alwaysVisibleScrollThumb,
-  }) {
-    var scrollThumbAndLabel = labelText == null
-        ? scrollThumb
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              ScrollLabel(
-                animation: labelAnimation,
-                backgroundColor: backgroundColor,
-                constraints: labelConstraints,
-                child: labelText,
-              ),
-              scrollThumb,
-            ],
-          );
-
-    if (alwaysVisibleScrollThumb) {
-      return scrollThumbAndLabel;
-    }
-    return SlideFadeTransition(
-      animation: thumbAnimation!,
-      child: scrollThumbAndLabel,
-    );
-  }
-
-  static ScrollThumbBuilder _thumbSemicircleBuilder(
-    double width,
-    Key? scrollThumbKey,
-    bool alwaysVisibleScrollThumb,
-  ) {
-    return (
-      Color backgroundColor,
-      Animation<double> thumbAnimation,
-      Animation<double> labelAnimation,
-      double height, {
-      Text? labelText,
-      BoxConstraints? labelConstraints,
-    }) {
-      final scrollThumb = CustomPaint(
-        key: scrollThumbKey,
-        foregroundPainter: ArrowCustomPainter(Colors.white),
-        child: Material(
-          elevation: 4.0,
-          color: backgroundColor,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(height),
-            bottomLeft: Radius.circular(height),
-            topRight: const Radius.circular(4.0),
-            bottomRight: const Radius.circular(4.0),
-          ),
-          child: Container(
-            constraints: BoxConstraints.tight(Size(width, height)),
-          ),
-        ),
-      );
-
-      return buildScrollThumbAndLabel(
-        scrollThumb: scrollThumb,
-        backgroundColor: backgroundColor,
-        thumbAnimation: thumbAnimation,
-        labelAnimation: labelAnimation,
-        labelText: labelText,
-        labelConstraints: labelConstraints,
-        alwaysVisibleScrollThumb: alwaysVisibleScrollThumb,
-      );
-    };
-  }
 }
 
 class ScrollLabel extends StatelessWidget {
@@ -607,41 +522,43 @@ class MultiLabelScrollThumb extends StatelessWidget {
                   ],
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (prevLabel != null)
-                      Opacity(
-                        opacity: 0.5,
-                        child: DefaultTextStyle(
-                          style: Theme.of(context).textTheme.labelSmall!,
+                child: Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (prevLabel != null)
+                        Opacity(
+                          opacity: 0.5,
+                          child: DefaultTextStyle(
+                            style: Theme.of(context).textTheme.labelSmall!,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.visible,
+                            child: prevLabel!,
+                          ),
+                        ),
+                      if (currentLabel != null)
+                        DefaultTextStyle(
+                          style: Theme.of(context).textTheme.labelMedium!,
                           maxLines: 1,
                           softWrap: false,
                           overflow: TextOverflow.visible,
-                          child: prevLabel!,
+                          child: currentLabel!,
                         ),
-                      ),
-                    if (currentLabel != null)
-                      DefaultTextStyle(
-                        style: Theme.of(context).textTheme.labelMedium!,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.visible,
-                        child: currentLabel!,
-                      ),
-                    if (nextLabel != null)
-                      Opacity(
-                        opacity: 0.5,
-                        child: DefaultTextStyle(
-                          style: Theme.of(context).textTheme.labelSmall!,
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.visible,
-                          child: nextLabel!,
+                      if (nextLabel != null)
+                        Opacity(
+                          opacity: 0.5,
+                          child: DefaultTextStyle(
+                            style: Theme.of(context).textTheme.labelSmall!,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.visible,
+                            child: nextLabel!,
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

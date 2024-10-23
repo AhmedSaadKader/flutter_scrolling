@@ -4,15 +4,15 @@ class ScrollbarWithOverlayMenu extends StatefulWidget {
   final List<String> categories;
 
   const ScrollbarWithOverlayMenu({
-    Key? key,
+    super.key,
     required this.categories,
-  }) : super(key: key);
+  });
 
   @override
-  _ScrollbarWithOverlayMenuState createState() => _ScrollbarWithOverlayMenuState();
+  ScrollbarWithOverlayMenuState createState() => ScrollbarWithOverlayMenuState();
 }
 
-class _ScrollbarWithOverlayMenuState extends State<ScrollbarWithOverlayMenu> {
+class ScrollbarWithOverlayMenuState extends State<ScrollbarWithOverlayMenu> {
   late ScrollController _mainController;
   late ScrollController _menuController;
   bool _isMenuOpen = false;
