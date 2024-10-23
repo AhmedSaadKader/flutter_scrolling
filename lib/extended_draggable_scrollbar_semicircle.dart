@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 /// Build the Scroll Thumb and label using the current configuration
-typedef Widget ScrollThumbBuilder(
+typedef ScrollThumbBuilder = Widget Function(
   Color backgroundColor,
   Animation<double> thumbAnimation,
   Animation<double> labelAnimation,
@@ -15,13 +14,15 @@ typedef Widget ScrollThumbBuilder(
 });
 
 /// Build a Text widget using the current scroll offset
-typedef Text LabelTextBuilder(double offsetY);
+typedef LabelTextBuilder = Text Function(int item);
 
 /// A widget that will display a BoxScrollView with a ScrollThumb that can be dragged
 /// for quick navigation of the BoxScrollView.
 class DraggableScrollbar extends StatefulWidget {
   /// The view that will be scrolled with the scroll thumb
-  final Widget child;
+  final ScrollablePositionedList child;
+
+  final ItemPositionsListener itemPositionsListener;
 
   /// A function that builds a thumb using the current configuration
   final ScrollThumbBuilder scrollThumbBuilder;
@@ -34,6 +35,9 @@ class DraggableScrollbar extends StatefulWidget {
 
   /// The amount of padding that should surround the thumb
   final EdgeInsetsGeometry? padding;
+
+  /// The height offset of the thumb/bar from the bottom of the page
+  final double? heightOffset;
 
   /// Determines how quickly the scrollbar will animate in and out
   final Duration scrollbarAnimationDuration;
@@ -48,87 +52,48 @@ class DraggableScrollbar extends StatefulWidget {
   final BoxConstraints? labelConstraints;
 
   /// The ScrollController for the BoxScrollView
-  final ScrollController controller;
+  final ItemScrollController controller;
 
   /// Determines scrollThumb displaying. If you draw own ScrollThumb and it is true you just don't need to use animation parameters in [scrollThumbBuilder]
   final bool alwaysVisibleScrollThumb;
 
-  DraggableScrollbar({
-    Key? key,
-    this.alwaysVisibleScrollThumb = false,
-    required this.heightScrollThumb,
-    required this.backgroundColor,
-    required this.scrollThumbBuilder,
-    required this.child,
-    required this.controller,
-    this.padding,
-    this.scrollbarAnimationDuration = const Duration(milliseconds: 300),
-    this.scrollbarTimeToFade = const Duration(milliseconds: 600),
-    this.labelTextBuilder,
-    this.labelConstraints,
-  })  : assert(controller != null),
-        assert(scrollThumbBuilder != null),
-        super(key: key);
-
-  DraggableScrollbar.rrect({
-    Key? key,
-    Key? scrollThumbKey,
-    this.alwaysVisibleScrollThumb = false,
-    required this.child,
-    required this.controller,
-    this.heightScrollThumb = 48.0,
-    this.backgroundColor = Colors.white,
-    this.padding,
-    this.scrollbarAnimationDuration = const Duration(milliseconds: 300),
-    this.scrollbarTimeToFade = const Duration(milliseconds: 600),
-    this.labelTextBuilder,
-    this.labelConstraints,
-  })  : scrollThumbBuilder = _thumbRRectBuilder(scrollThumbKey, alwaysVisibleScrollThumb),
-        super(key: key);
-
-  DraggableScrollbar.arrows({
-    Key? key,
-    Key? scrollThumbKey,
-    this.alwaysVisibleScrollThumb = false,
-    required this.child,
-    required this.controller,
-    this.heightScrollThumb = 48.0,
-    this.backgroundColor = Colors.white,
-    this.padding,
-    this.scrollbarAnimationDuration = const Duration(milliseconds: 300),
-    this.scrollbarTimeToFade = const Duration(milliseconds: 600),
-    this.labelTextBuilder,
-    this.labelConstraints,
-  })  : scrollThumbBuilder = _thumbArrowBuilder(scrollThumbKey, alwaysVisibleScrollThumb),
-        super(key: key);
+  final Function(bool scrolling) scrollStateListener;
 
   DraggableScrollbar.semicircle({
-    Key? key,
+    super.key,
     Key? scrollThumbKey,
     this.alwaysVisibleScrollThumb = false,
     required this.child,
     required this.controller,
+    required this.itemPositionsListener,
+    required this.scrollStateListener,
     this.heightScrollThumb = 48.0,
-    this.backgroundColor = Colors.white,
+    this.backgroundColor = Colors.black,
     this.padding,
+    this.heightOffset,
     this.scrollbarAnimationDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
     this.labelTextBuilder,
     this.labelConstraints,
-  })  : scrollThumbBuilder = _thumbSemicircleBuilder(heightScrollThumb * 0.6, scrollThumbKey, alwaysVisibleScrollThumb),
-        super(key: key);
+  })  : assert(child.scrollDirection == Axis.vertical),
+        scrollThumbBuilder = _thumbSemicircleBuilder(
+          heightScrollThumb * 0.6,
+          scrollThumbKey,
+          alwaysVisibleScrollThumb,
+        );
 
   @override
-  _DraggableScrollbarState createState() => _DraggableScrollbarState();
+  DraggableScrollbarState createState() => DraggableScrollbarState();
 
-  static buildScrollThumbAndLabel(
-      {required Widget scrollThumb,
-      required Color backgroundColor,
-      required Animation<double>? thumbAnimation,
-      required Animation<double>? labelAnimation,
-      required Text? labelText,
-      required BoxConstraints? labelConstraints,
-      required bool alwaysVisibleScrollThumb}) {
+  static buildScrollThumbAndLabel({
+    required Widget scrollThumb,
+    required Color backgroundColor,
+    required Animation<double>? thumbAnimation,
+    required Animation<double>? labelAnimation,
+    required Text? labelText,
+    required BoxConstraints? labelConstraints,
+    required bool alwaysVisibleScrollThumb,
+  }) {
     var scrollThumbAndLabel = labelText == null
         ? scrollThumb
         : Row(
@@ -154,7 +119,11 @@ class DraggableScrollbar extends StatefulWidget {
     );
   }
 
-  static ScrollThumbBuilder _thumbSemicircleBuilder(double width, Key? scrollThumbKey, bool alwaysVisibleScrollThumb) {
+  static ScrollThumbBuilder _thumbSemicircleBuilder(
+    double width,
+    Key? scrollThumbKey,
+    bool alwaysVisibleScrollThumb,
+  ) {
     return (
       Color backgroundColor,
       Animation<double> thumbAnimation,
@@ -165,85 +134,18 @@ class DraggableScrollbar extends StatefulWidget {
     }) {
       final scrollThumb = CustomPaint(
         key: scrollThumbKey,
-        foregroundPainter: ArrowCustomPainter(Colors.grey),
+        foregroundPainter: ArrowCustomPainter(Colors.white),
         child: Material(
           elevation: 4.0,
           color: backgroundColor,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(height),
             bottomLeft: Radius.circular(height),
-            topRight: Radius.circular(4.0),
-            bottomRight: Radius.circular(4.0),
+            topRight: const Radius.circular(4.0),
+            bottomRight: const Radius.circular(4.0),
           ),
           child: Container(
             constraints: BoxConstraints.tight(Size(width, height)),
-          ),
-        ),
-      );
-
-      return buildScrollThumbAndLabel(
-        scrollThumb: scrollThumb,
-        backgroundColor: backgroundColor,
-        thumbAnimation: thumbAnimation,
-        labelAnimation: labelAnimation,
-        labelText: labelText,
-        labelConstraints: labelConstraints,
-        alwaysVisibleScrollThumb: alwaysVisibleScrollThumb,
-      );
-    };
-  }
-
-  static ScrollThumbBuilder _thumbArrowBuilder(Key? scrollThumbKey, bool alwaysVisibleScrollThumb) {
-    return (
-      Color backgroundColor,
-      Animation<double> thumbAnimation,
-      Animation<double> labelAnimation,
-      double height, {
-      Text? labelText,
-      BoxConstraints? labelConstraints,
-    }) {
-      final scrollThumb = ClipPath(
-        clipper: ArrowClipper(),
-        child: Container(
-          height: height,
-          width: 20.0,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.all(
-              Radius.circular(12.0),
-            ),
-          ),
-        ),
-      );
-
-      return buildScrollThumbAndLabel(
-        scrollThumb: scrollThumb,
-        backgroundColor: backgroundColor,
-        thumbAnimation: thumbAnimation,
-        labelAnimation: labelAnimation,
-        labelText: labelText,
-        labelConstraints: labelConstraints,
-        alwaysVisibleScrollThumb: alwaysVisibleScrollThumb,
-      );
-    };
-  }
-
-  static ScrollThumbBuilder _thumbRRectBuilder(Key? scrollThumbKey, bool alwaysVisibleScrollThumb) {
-    return (
-      Color backgroundColor,
-      Animation<double> thumbAnimation,
-      Animation<double> labelAnimation,
-      double height, {
-      Text? labelText,
-      BoxConstraints? labelConstraints,
-    }) {
-      final scrollThumb = Material(
-        elevation: 4.0,
-        color: backgroundColor,
-        borderRadius: BorderRadius.all(Radius.circular(7.0)),
-        child: Container(
-          constraints: BoxConstraints.tight(
-            Size(16.0, height),
           ),
         ),
       );
@@ -270,25 +172,26 @@ class ScrollLabel extends StatelessWidget {
   static const BoxConstraints _defaultConstraints = BoxConstraints.tightFor(width: 72.0, height: 28.0);
 
   const ScrollLabel({
-    Key? key,
+    super.key,
     required this.child,
     required this.animation,
     required this.backgroundColor,
     this.constraints = _defaultConstraints,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: animation!,
       child: Container(
-        margin: EdgeInsets.only(right: 12.0),
+        margin: const EdgeInsets.only(right: 12.0),
         child: Material(
           elevation: 4.0,
           color: backgroundColor,
-          borderRadius: BorderRadius.all(Radius.circular(16.0)),
+          borderRadius: const BorderRadius.all(Radius.circular(16.0)),
           child: Container(
             constraints: constraints ?? _defaultConstraints,
+            padding: const EdgeInsets.symmetric(horizontal: 10.0),
             alignment: Alignment.center,
             child: child,
           ),
@@ -298,10 +201,10 @@ class ScrollLabel extends StatelessWidget {
   }
 }
 
-class _DraggableScrollbarState extends State<DraggableScrollbar> with TickerProviderStateMixin {
+class DraggableScrollbarState extends State<DraggableScrollbar> with TickerProviderStateMixin {
   late double _barOffset;
-  late double _viewOffset;
   late bool _isDragInProcess;
+  late int _currentItem;
 
   late AnimationController _thumbAnimationController;
   late Animation<double> _thumbAnimation;
@@ -313,8 +216,8 @@ class _DraggableScrollbarState extends State<DraggableScrollbar> with TickerProv
   void initState() {
     super.initState();
     _barOffset = 0.0;
-    _viewOffset = 0.0;
     _isDragInProcess = false;
+    _currentItem = 0;
 
     _thumbAnimationController = AnimationController(
       vsync: this,
@@ -345,162 +248,114 @@ class _DraggableScrollbarState extends State<DraggableScrollbar> with TickerProv
     super.dispose();
   }
 
-  double get barMaxScrollExtent => context.size!.height - widget.heightScrollThumb;
+  double get barMaxScrollExtent => (context.size?.height ?? 0) - widget.heightScrollThumb - (widget.heightOffset ?? 0);
 
-  double get barMinScrollExtent => 0.0;
+  double get barMinScrollExtent => 0;
 
-  double get viewMaxScrollExtent => widget.controller.position.maxScrollExtent;
+  int get maxItemCount => widget.child.itemCount;
 
-  double get viewMinScrollExtent => widget.controller.position.minScrollExtent;
+// Helper method to get all three labels
+  List<Text?> _getLabels() {
+    if (widget.labelTextBuilder == null || !_isDragInProcess) {
+      return [null, null, null];
+    }
+
+    final prevItem = _currentItem > 0 ? _currentItem - 1 : null;
+    final nextItem = _currentItem < maxItemCount - 1 ? _currentItem + 1 : null;
+
+    return [
+      prevItem != null ? widget.labelTextBuilder!(prevItem) : null,
+      widget.labelTextBuilder!(_currentItem),
+      nextItem != null ? widget.labelTextBuilder!(nextItem) : null,
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
-    Text? currentLabelText, previousLabelText, nextLabelText;
+    final labels = _getLabels();
 
-    return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
-      if (widget.labelTextBuilder != null && _isDragInProcess) {
-        double currentPosition = _viewOffset + _barOffset + widget.heightScrollThumb / 2;
-
-        // Build the current, previous, and next labels
-        currentLabelText = widget.labelTextBuilder!(currentPosition);
-
-        // Adjust the position for previous and next labels
-        previousLabelText = widget.labelTextBuilder!(
-          max(currentPosition - widget.heightScrollThumb, 0.0),
-        );
-
-        nextLabelText = widget.labelTextBuilder!(
-          min(currentPosition + widget.heightScrollThumb, constraints.maxHeight),
-        );
-      }
-
-      return NotificationListener<ScrollNotification>(
-        onNotification: (ScrollNotification notification) {
-          changePosition(notification);
-          return false;
-        },
-        child: Stack(
-          children: <Widget>[
-            RepaintBoundary(
-              child: widget.child,
-            ),
-            RepaintBoundary(
-              child: GestureDetector(
-                onVerticalDragStart: _onVerticalDragStart,
-                onVerticalDragUpdate: _onVerticalDragUpdate,
-                onVerticalDragEnd: _onVerticalDragEnd,
-                child: Container(
-                  alignment: Alignment.topRight,
-                  padding: widget.padding,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        top: _barOffset,
-                        right: 0,
-                        child: widget.scrollThumbBuilder(
-                          widget.backgroundColor,
-                          _thumbAnimation,
-                          _labelAnimation,
-                          widget.heightScrollThumb,
-                          labelText: currentLabelText, // Current label
-                          labelConstraints: widget.labelConstraints,
-                        ),
-                      ),
-                      if (previousLabelText != null)
-                        Positioned(
-                          top: _barOffset - widget.heightScrollThumb,
-                          right: 0,
-                          child: ScrollLabel(
-                            animation: _labelAnimation,
-                            backgroundColor: widget.backgroundColor,
-                            constraints: widget.labelConstraints,
-                            child: previousLabelText!,
-                          ),
-                        ),
-                      if (nextLabelText != null)
-                        Positioned(
-                          top: _barOffset + widget.heightScrollThumb,
-                          right: 0,
-                          child: ScrollLabel(
-                            animation: _labelAnimation,
-                            backgroundColor: widget.backgroundColor,
-                            constraints: widget.labelConstraints,
-                            child: nextLabelText!,
-                          ),
-                        ),
-                    ],
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        return NotificationListener<ScrollNotification>(
+          onNotification: (ScrollNotification notification) {
+            changePosition(notification);
+            return false;
+          },
+          child: Stack(
+            children: <Widget>[
+              RepaintBoundary(
+                child: widget.child,
+              ),
+              RepaintBoundary(
+                child: GestureDetector(
+                  onVerticalDragStart: _onVerticalDragStart,
+                  onVerticalDragUpdate: _onVerticalDragUpdate,
+                  onVerticalDragEnd: _onVerticalDragEnd,
+                  child: Container(
+                    alignment: Alignment.topRight,
+                    margin: EdgeInsets.only(top: _barOffset),
+                    padding: widget.padding,
+                    child: MultiLabelScrollThumb(
+                      backgroundColor: widget.backgroundColor,
+                      thumbAnimation: _thumbAnimation,
+                      labelAnimation: _labelAnimation,
+                      height: widget.heightScrollThumb,
+                      prevLabel: labels[0],
+                      currentLabel: labels[1],
+                      nextLabel: labels[2],
+                      labelConstraints: widget.labelConstraints,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      );
-    });
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  //scroll bar has received notification that it's view was scrolled
-  //so it should also changes his position
-  //but only if it isn't dragged
+  // scroll bar has received notification that it's view was scrolled
+  // so it should also changes his position
+  // but only if it isn't dragged
   changePosition(ScrollNotification notification) {
     if (_isDragInProcess) {
       return;
     }
 
     setState(() {
-      if (notification is ScrollUpdateNotification) {
-        _barOffset += getBarDelta(
-          notification.scrollDelta!,
-          barMaxScrollExtent,
-          viewMaxScrollExtent,
-        );
+      try {
+        int firstItemIndex = widget.itemPositionsListener.itemPositions.value.first.index;
 
-        if (_barOffset < barMinScrollExtent) {
-          _barOffset = barMinScrollExtent;
-        }
-        if (_barOffset > barMaxScrollExtent) {
-          _barOffset = barMaxScrollExtent;
-        }
+        if (notification is ScrollUpdateNotification) {
+          _barOffset = (firstItemIndex / maxItemCount) * barMaxScrollExtent;
 
-        _viewOffset += notification.scrollDelta!;
-        if (_viewOffset < widget.controller.position.minScrollExtent) {
-          _viewOffset = widget.controller.position.minScrollExtent;
-        }
-        if (_viewOffset > viewMaxScrollExtent) {
-          _viewOffset = viewMaxScrollExtent;
-        }
-      }
-
-      if (notification is ScrollUpdateNotification || notification is OverscrollNotification) {
-        if (_thumbAnimationController.status != AnimationStatus.forward) {
-          _thumbAnimationController.forward();
+          if (_barOffset < barMinScrollExtent) {
+            _barOffset = barMinScrollExtent;
+          }
+          if (_barOffset > barMaxScrollExtent) {
+            _barOffset = barMaxScrollExtent;
+          }
         }
 
-        _fadeoutTimer?.cancel();
-        _fadeoutTimer = Timer(widget.scrollbarTimeToFade, () {
-          _thumbAnimationController.reverse();
-          _labelAnimationController.reverse();
-          _fadeoutTimer = null;
-        });
-      }
+        if (notification is ScrollUpdateNotification || notification is OverscrollNotification) {
+          if (_thumbAnimationController.status != AnimationStatus.forward) {
+            _thumbAnimationController.forward();
+          }
+
+          if (itemPosition < maxItemCount) {
+            _currentItem = itemPosition;
+          }
+
+          _fadeoutTimer?.cancel();
+          _fadeoutTimer = Timer(widget.scrollbarTimeToFade, () {
+            _thumbAnimationController.reverse();
+            _labelAnimationController.reverse();
+            _fadeoutTimer = null;
+          });
+        }
+      } catch (_) {}
     });
-  }
-
-  double getBarDelta(
-    double scrollViewDelta,
-    double barMaxScrollExtent,
-    double viewMaxScrollExtent,
-  ) {
-    return scrollViewDelta * barMaxScrollExtent / viewMaxScrollExtent;
-  }
-
-  double getScrollViewDelta(
-    double barDelta,
-    double barMaxScrollExtent,
-    double viewMaxScrollExtent,
-  ) {
-    return barDelta * viewMaxScrollExtent / barMaxScrollExtent;
   }
 
   void _onVerticalDragStart(DragStartDetails details) {
@@ -509,7 +364,39 @@ class _DraggableScrollbarState extends State<DraggableScrollbar> with TickerProv
       _labelAnimationController.forward();
       _fadeoutTimer?.cancel();
     });
+
+    widget.scrollStateListener(true);
   }
+
+  int get itemPosition {
+    int numberOfItems = widget.child.itemCount;
+    return ((_barOffset / barMaxScrollExtent) * numberOfItems).toInt();
+  }
+
+  void _jumpToBarPosition() {
+    if (itemPosition > maxItemCount - 1) {
+      return;
+    }
+
+    _currentItem = itemPosition;
+
+    /// If the bar is at the bottom but the item position is still smaller than the max item count (due to rounding error)
+    /// jump to the end of the list
+    if (barMaxScrollExtent - _barOffset < 10 && itemPosition < maxItemCount) {
+      widget.controller.jumpTo(
+        index: maxItemCount,
+      );
+
+      return;
+    }
+
+    widget.controller.jumpTo(
+      index: itemPosition,
+    );
+  }
+
+  Timer? dragHaltTimer;
+  int lastTimerPosition = 0;
 
   void _onVerticalDragUpdate(DragUpdateDetails details) {
     setState(() {
@@ -526,16 +413,20 @@ class _DraggableScrollbarState extends State<DraggableScrollbar> with TickerProv
           _barOffset = barMaxScrollExtent;
         }
 
-        double viewDelta = getScrollViewDelta(details.delta.dy, barMaxScrollExtent, viewMaxScrollExtent);
+        if (itemPosition != lastTimerPosition) {
+          lastTimerPosition = itemPosition;
+          dragHaltTimer?.cancel();
+          widget.scrollStateListener(true);
 
-        _viewOffset = widget.controller.position.pixels + viewDelta;
-        if (_viewOffset < widget.controller.position.minScrollExtent) {
-          _viewOffset = widget.controller.position.minScrollExtent;
+          dragHaltTimer = Timer(
+            const Duration(milliseconds: 500),
+            () {
+              widget.scrollStateListener(false);
+            },
+          );
         }
-        if (_viewOffset > viewMaxScrollExtent) {
-          _viewOffset = viewMaxScrollExtent;
-        }
-        widget.controller.jumpTo(_viewOffset);
+
+        _jumpToBarPosition();
       }
     });
   }
@@ -546,9 +437,13 @@ class _DraggableScrollbarState extends State<DraggableScrollbar> with TickerProv
       _labelAnimationController.reverse();
       _fadeoutTimer = null;
     });
+
     setState(() {
+      _jumpToBarPosition();
       _isDragInProcess = false;
     });
+
+    widget.scrollStateListener(false);
   }
 }
 
@@ -606,7 +501,10 @@ class ArrowClipper extends CustomClipper<Path> {
     path.lineTo(startPointX + arrowWidth / 2, startPointY - arrowWidth / 2);
     path.lineTo(startPointX + arrowWidth, startPointY);
     path.lineTo(startPointX + arrowWidth, startPointY + 1.0);
-    path.lineTo(startPointX + arrowWidth / 2, startPointY - arrowWidth / 2 + 1.0);
+    path.lineTo(
+      startPointX + arrowWidth / 2,
+      startPointY - arrowWidth / 2 + 1.0,
+    );
     path.lineTo(startPointX, startPointY + 1.0);
     path.close();
 
@@ -615,7 +513,10 @@ class ArrowClipper extends CustomClipper<Path> {
     path.lineTo(startPointX + arrowWidth / 2, startPointY + arrowWidth / 2);
     path.lineTo(startPointX, startPointY);
     path.lineTo(startPointX, startPointY - 1.0);
-    path.lineTo(startPointX + arrowWidth / 2, startPointY + arrowWidth / 2 - 1.0);
+    path.lineTo(
+      startPointX + arrowWidth / 2,
+      startPointY + arrowWidth / 2 - 1.0,
+    );
     path.lineTo(startPointX + arrowWidth, startPointY - 1.0);
     path.close();
 
@@ -631,25 +532,141 @@ class SlideFadeTransition extends StatelessWidget {
   final Widget child;
 
   const SlideFadeTransition({
-    Key? key,
+    super.key,
     required this.animation,
     required this.child,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: animation,
-      builder: (context, child) => animation.value == 0.0 ? Container() : child!,
+      builder: (context, child) => animation.value == 0.0 ? const SizedBox() : child!,
       child: SlideTransition(
         position: Tween(
-          begin: Offset(0.3, 0.0),
-          end: Offset(0.0, 0.0),
+          begin: const Offset(0.3, 0.0),
+          end: const Offset(0.0, 0.0),
         ).animate(animation),
         child: FadeTransition(
           opacity: animation,
           child: child,
         ),
+      ),
+    );
+  }
+}
+
+class MultiLabelScrollThumb extends StatelessWidget {
+  final Color backgroundColor;
+  final Animation<double> thumbAnimation;
+  final Animation<double> labelAnimation;
+  final double height;
+  final Text? prevLabel;
+  final Text? currentLabel;
+  final Text? nextLabel;
+  final BoxConstraints? labelConstraints;
+  static const double thumbWidth = 40.0;
+
+  const MultiLabelScrollThumb({
+    super.key,
+    required this.backgroundColor,
+    required this.thumbAnimation,
+    required this.labelAnimation,
+    required this.height,
+    this.prevLabel,
+    this.currentLabel,
+    this.nextLabel,
+    this.labelConstraints,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicWidth(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Labels section
+          if (currentLabel != null)
+            FadeTransition(
+              opacity: labelAnimation,
+              child: Container(
+                margin: const EdgeInsets.only(right: 12.0),
+                constraints: BoxConstraints(
+                  minWidth: labelConstraints?.minWidth ?? 72.0,
+                  maxHeight: height,
+                ),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(16.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 4.0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (prevLabel != null)
+                      Opacity(
+                        opacity: 0.5,
+                        child: DefaultTextStyle(
+                          style: Theme.of(context).textTheme.labelSmall!,
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.visible,
+                          child: prevLabel!,
+                        ),
+                      ),
+                    if (currentLabel != null)
+                      DefaultTextStyle(
+                        style: Theme.of(context).textTheme.labelMedium!,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.visible,
+                        child: currentLabel!,
+                      ),
+                    if (nextLabel != null)
+                      Opacity(
+                        opacity: 0.5,
+                        child: DefaultTextStyle(
+                          style: Theme.of(context).textTheme.labelSmall!,
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.visible,
+                          child: nextLabel!,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Semicircular thumb
+          FadeTransition(
+            opacity: thumbAnimation,
+            child: CustomPaint(
+              foregroundPainter: ArrowCustomPainter(Colors.white),
+              child: Material(
+                elevation: 4.0,
+                color: backgroundColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(height),
+                  bottomLeft: Radius.circular(height),
+                  topRight: const Radius.circular(4.0),
+                  bottomRight: const Radius.circular(4.0),
+                ),
+                child: Container(
+                  constraints: BoxConstraints.tight(Size(thumbWidth, height)),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
