@@ -13,13 +13,13 @@ class CategoryListWithScroll extends StatefulWidget {
   final void Function(int index)? onCategoryTap;
 
   const CategoryListWithScroll({
-    Key? key,
+    super.key,
     required this.categories,
     required this.itemPositionsListener,
     required this.itemCount,
     this.isVisible = false,
     this.onCategoryTap,
-  }) : super(key: key);
+  });
 
   @override
   _CategoryListWithScrollState createState() => _CategoryListWithScrollState();
@@ -27,6 +27,7 @@ class CategoryListWithScroll extends StatefulWidget {
 
 class _CategoryListWithScrollState extends State<CategoryListWithScroll> {
   int _activeCategory = 0;
+  final ScrollController _categoryScrollController = ScrollController();
 
   @override
   void initState() {
@@ -37,6 +38,7 @@ class _CategoryListWithScrollState extends State<CategoryListWithScroll> {
   @override
   void dispose() {
     widget.itemPositionsListener.itemPositions.removeListener(_updateActiveCategory);
+    _categoryScrollController.dispose();
     super.dispose();
   }
 
@@ -52,6 +54,15 @@ class _CategoryListWithScrollState extends State<CategoryListWithScroll> {
         int itemsPerCategory = widget.itemCount ~/ widget.categories.length;
         _activeCategory = firstVisibleIndex ~/ itemsPerCategory;
       });
+
+      // Scroll the categories list to keep the active category visible.
+      if (_categoryScrollController.hasClients) {
+        _categoryScrollController.animateTo(
+          _activeCategory * 40.0, // Assuming each category item has a height of 50.0
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
     }
   }
 
@@ -63,10 +74,25 @@ class _CategoryListWithScrollState extends State<CategoryListWithScroll> {
       width: 100,
       color: Colors.grey[200],
       child: ListView.builder(
+        controller: _categoryScrollController, // Attach the ScrollController here
         itemCount: widget.categories.length,
         itemBuilder: (context, index) {
           return GestureDetector(
-            onTap: () => widget.onCategoryTap?.call(index),
+            onTap: () {
+              widget.onCategoryTap?.call(index);
+              setState(() {
+                _activeCategory = index;
+              });
+              // Scroll to the corresponding main list item
+              int itemsPerCategory = widget.itemCount ~/ widget.categories.length;
+              int targetIndex = index * itemsPerCategory;
+              widget.itemPositionsListener.itemPositions
+                  .removeListener(_updateActiveCategory); // Temporarily remove listener to avoid feedback loop
+              widget.itemPositionsListener.itemPositions.addListener(() {
+                widget.itemPositionsListener.itemPositions
+                    .removeListener(_updateActiveCategory); // Re-attach listener after jump completes
+              });
+            },
             child: Container(
               color: _activeCategory == index ? Colors.blue : Colors.transparent,
               padding: const EdgeInsets.all(8.0),

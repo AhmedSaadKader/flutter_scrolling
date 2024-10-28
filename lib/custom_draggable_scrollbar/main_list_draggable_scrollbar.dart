@@ -78,7 +78,13 @@ class SemicircleDemoState extends State<SemicircleDemo> {
           child: DraggableScrollbar.semicircle(
             alwaysVisibleScrollThumb: true,
             scrollStateListener: (scrolling) {
-              setState(() => _scrolling = scrolling);
+              if (scrolling) setState(() => _scrolling = scrolling);
+              if (!scrolling) {
+                // Delay hiding the categories list to allow user to notice the change
+                Future.delayed(const Duration(milliseconds: 3000), () {
+                  if (mounted) setState(() => _scrolling = false);
+                });
+              }
             },
             labelTextBuilder: (pos) {
               int itemsPerCategory = SemicircleDemo.numItems ~/ widget.categories.length;
