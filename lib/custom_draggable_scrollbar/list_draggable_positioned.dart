@@ -93,7 +93,7 @@ class _CategoryListWithScrollState extends State<CategoryListWithScroll> {
       width: 150,
       height: MediaQuery.of(context).size.height * 0.8,
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(

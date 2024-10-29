@@ -114,7 +114,7 @@ class SemicircleDemoState extends State<SemicircleDemo> {
         if (_scrolling || _dragging)
           Positioned(
             top: 20.0, // Adjust based on where you'd like it to start
-            right: 50.0, // Position next to the scrollbar
+            right: 0.0, // Position next to the scrollbar
             child: CategoryListWithScroll(
               categories: widget.categories,
               itemPositionsListener: widget.itemPositionsListener,
