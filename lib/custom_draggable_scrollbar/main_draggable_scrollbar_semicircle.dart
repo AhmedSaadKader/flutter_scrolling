@@ -91,6 +91,7 @@ class SemicircleDemoState extends State<SemicircleDemo> {
       controller: widget.controller,
       itemPositionsListener: _itemPositionsListener, // Add this listener
       labelConstraints: const BoxConstraints.tightFor(width: 80.0, height: 30.0),
+      onDragInProcessChanged: (bool value) {},
       child: ScrollablePositionedList.builder(
         itemScrollController: widget.controller,
         itemPositionsListener: _itemPositionsListener, // Add here as well

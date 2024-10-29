@@ -26,8 +26,8 @@ class _CategoryListWithScrollState extends State<CategoryListWithScroll> {
   final ScrollController _categoryScrollController = ScrollController();
 
   // Constants for better control
-  static const double _itemHeight = 40.0;
-  static const Duration _scrollDuration = Duration(milliseconds: 150); // Faster scrolling
+  static const double _itemHeight = 50.0;
+  static const Duration _scrollDuration = Duration(milliseconds: 100); // Faster scrolling
 
   @override
   void initState() {
@@ -66,7 +66,7 @@ class _CategoryListWithScrollState extends State<CategoryListWithScroll> {
     if (!_categoryScrollController.hasClients) return;
 
     final screenHeight = MediaQuery.of(context).size.height;
-    final listViewHeight = screenHeight; // Assuming list takes full height
+    final listViewHeight = screenHeight * 0.8; // Assuming list takes full height
     final itemPosition = index * _itemHeight;
 
     // Calculate the offset that would center the selected item
@@ -90,8 +90,8 @@ class _CategoryListWithScrollState extends State<CategoryListWithScroll> {
     if (!widget.isVisible) return const SizedBox.shrink();
 
     return Container(
-      width: 100,
-      height: MediaQuery.of(context).size.height * 0.5,
+      width: 150,
+      height: MediaQuery.of(context).size.height * 0.8,
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(8),

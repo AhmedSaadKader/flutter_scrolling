@@ -22,6 +22,8 @@ class DraggableScrollbar extends StatefulWidget {
   /// The view that will be scrolled with the scroll thumb
   final ScrollablePositionedList child;
 
+  final ValueChanged<bool> onDragInProcessChanged;
+
   final ItemPositionsListener itemPositionsListener;
 
   /// A function that builds a thumb using the current configuration
@@ -64,6 +66,7 @@ class DraggableScrollbar extends StatefulWidget {
     Key? scrollThumbKey,
     this.alwaysVisibleScrollThumb = false,
     required this.child,
+    required this.onDragInProcessChanged,
     required this.controller,
     required this.itemPositionsListener,
     required this.scrollStateListener,
@@ -263,6 +266,7 @@ class DraggableScrollbarState extends State<DraggableScrollbar> with TickerProvi
       _fadeoutTimer?.cancel();
     });
 
+    widget.onDragInProcessChanged(_isDragInProcess);
     widget.scrollStateListener(true);
   }
 
@@ -341,6 +345,7 @@ class DraggableScrollbarState extends State<DraggableScrollbar> with TickerProvi
       _isDragInProcess = false;
     });
 
+    widget.onDragInProcessChanged(_isDragInProcess);
     widget.scrollStateListener(false);
   }
 }
